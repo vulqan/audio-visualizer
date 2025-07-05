@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Morphing Particles</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    #startButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      padding: 12px 24px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #controls {
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      z-index: 10;
+      display: none;
+    }
+    #controls button {
+      font-size: 14px;
+      padding: 6px 12px;
+      margin-right: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button id="startButton">Start Visualizer</button>
+  <div id="controls">
+    <button id="playBtn">⏵ Play</button>
+    <button id="pauseBtn">⏸ Pause</button>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
