@@ -8,8 +8,15 @@ let bassLevel = 0;
 let shapeIndex = 0;
 let lastShapeChange = 0;
 let frequencyBand = 'bass';
-let audio;         // Audio global verfügbar machen
-let audioContext;  // Context für resume
+let audio;
+let audioContext;
+
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+let groupRotation = { x: 0, y: 0 };
+let autoRotate = false;
+let autoRotateTimeout;
+let dragMoved = false;
 
 const TOTAL_SHAPES = 15;
 const shapePositions = [];
@@ -17,14 +24,11 @@ const shapePositions = [];
 const startButton = document.getElementById('startButton');
 startButton.style.display = 'block';
 
-const ui = document.createElement('div');
-ui.style.position = 'absolute';
-ui.style.top = '10px';
-ui.style.left = '10px';
-ui.style.color = 'white';
-ui.style.fontFamily = 'monospace';
-ui.innerHTML = `
-  <label>Frequency Trigger:
+const uiContainer = document.getElementById('uiContainer');
+const bandSelectorContainer = document.createElement('div');
+bandSelectorContainer.innerHTML = `
+  <label>
+    Frequency Trigger:
     <select id="bandSelector">
       <option value="bass">Bass</option>
       <option value="mid">Mid</option>
@@ -32,7 +36,7 @@ ui.innerHTML = `
     </select>
   </label>
 `;
-document.body.appendChild(ui);
+uiContainer.appendChild(bandSelectorContainer);
 
 document.getElementById('bandSelector').addEventListener('change', (e) => {
   frequencyBand = e.target.value;
@@ -42,10 +46,8 @@ startButton.addEventListener('click', async () => {
   startButton.style.display = 'none';
   await init();
   animate();
+  uiContainer.style.display = 'flex';
 });
-
-// 🎛 UI nach dem Start anzeigen
-document.getElementById('controls').style.display = 'block';
 
 document.getElementById('playBtn').addEventListener('click', () => {
   if (audio.paused) {
@@ -113,7 +115,6 @@ async function init() {
 
   await audio.play().catch(e => console.error("Audio play error:", e));
 
-
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -147,12 +148,9 @@ async function init() {
     u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     u_audio: { value: audioTexture },
     u_morphProgress: { value: 0.0 },
-    u_mouse: { value: new THREE.Vector2(0,0) },
-    u_mousePower: { value: 0.0 },
-    uColorStart: { value: new THREE.Color(0xff00ff) }, // Pink
-    uColorEnd: { value: new THREE.Color(0x00ffff) }    // Türkis
+    uColorStart: { value: new THREE.Color(0xff00ff) },
+    uColorEnd: { value: new THREE.Color(0x00ffff) }
   };
-  
 
   material = new THREE.ShaderMaterial({
     uniforms,
@@ -164,71 +162,56 @@ async function init() {
     uniform float u_time;
     uniform sampler2D u_audio;
     varying float v_id;
-    uniform vec2 u_mouse;
-    uniform float u_mousePower;
-
 
     void main() {
-    float audioVal = texture2D(u_audio, vec2(clamp(fract(id / 256.0), 0.0, 0.999), 0.0)).r;
-    vec3 pos = mix(startPos, endPos, smoothstep(0.0, 1.0, u_morphProgress));
+      float audioVal = texture2D(u_audio, vec2(clamp(fract(id / 256.0), 0.0, 0.999), 0.0)).r;
+      vec3 pos = mix(startPos, endPos, smoothstep(0.0, 1.0, u_morphProgress));
 
-    // --- Organischer Noise-Verzerrer ---
-    float noise = sin(pos.x * 10.0 + u_time * 1.5 + id * 0.1) * 0.05;
-    pos += normalize(pos) * noise * (0.3 + audioVal * 1.0);
+      float noise = sin(pos.x * 10.0 + u_time * 1.5 + id * 0.1) * 0.05;
+      pos += normalize(pos) * noise * (0.3 + audioVal * 1.0);
 
-    vec3 flowOffset = vec3(
+      vec3 flowOffset = vec3(
         sin(u_time * 1.3 + id * 0.22),
         cos(u_time * 0.7 + id * 0.17),
         sin(u_time * 1.1 + id * 0.27)
-    ) * (0.07 + audioVal * 0.12);
-    pos += flowOffset;
+      ) * (0.07 + audioVal * 0.12);
+      pos += flowOffset;
 
-    // --- Multi-Layered Vortex Effect ---
-    float angle = u_time + id * 0.005;
-    float vortexR = 0.2 + audioVal * 0.5;
-    pos.xz += vec2(sin(angle), cos(angle)) * vortexR * 0.25 * sin(id * 0.05 + u_time);
+      float angle = u_time + id * 0.005;
+      float vortexR = 0.2 + audioVal * 0.5;
+      pos.xz += vec2(sin(angle), cos(angle)) * vortexR * 0.25 * sin(id * 0.05 + u_time);
 
-    // --- Spiral Wave ---
-    pos.y += sin(u_time * 2.0 + id * 0.01) * 0.07 * audioVal;
+      pos.y += sin(u_time * 2.0 + id * 0.01) * 0.07 * audioVal;
 
-    // --- Radial Pulses ---
-    float radial = length(pos.xy);
-    pos.xy += normalize(pos.xy) * 0.1 * sin(u_time * 6.0 + radial * 12.0 + id * 0.003) * audioVal;
+      float radial = length(pos.xy);
+      pos.xy += normalize(pos.xy) * 0.1 * sin(u_time * 6.0 + radial * 12.0 + id * 0.003) * audioVal;
 
-    // --- Audio-reactive Vortex Core (nur für zentrale Partikel) ---
-    if (mod(id, 100.0) < 10.0) {
+      if (mod(id, 100.0) < 10.0) {
         pos.xy += vec2(sin(u_time * 3.0), cos(u_time * 2.0)) * 0.13 * audioVal;
+      }
+
+      v_id = id;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      gl_PointSize = 2.5 + audioVal * 3.0;
     }
-
-    // --- Mouse Interaction ---
-    vec2 normMouse = u_mouse * 2.0 - 1.0; // Mapping -1..1
-    pos.xy += normalize(normMouse - pos.xy) * 0.2 * u_mousePower * (0.5 + audioVal);
-
-    v_id = id;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = 2.5 + audioVal * 3.0;
-
-
-}
-
     `,
     fragmentShader: `
-      precision highp float;
-      uniform float u_time;
-      uniform sampler2D u_audio;
-      uniform vec3 uColorStart;
-      uniform vec3 uColorEnd;
-      varying float v_id;
+    precision highp float;
+    uniform float u_time;
+    uniform sampler2D u_audio;
+    uniform vec3 uColorStart;
+    uniform vec3 uColorEnd;
+    varying float v_id;
 
-      void main() {
+    void main() {
       float audioVal = texture2D(u_audio, vec2(clamp(fract(v_id / 256.0), 0.0, 0.999), 0.0)).r;
       float dist = length(gl_PointCoord - vec2(0.5));
       float trailFade = smoothstep(0.5, 0.0, dist);
       float timeFade = 0.5 + 0.5 * sin(u_time * 2.0 + v_id * 0.01);
       float alpha = trailFade * timeFade;
 
-      vec3 color = mix(uColorStart, uColorEnd, audioVal); // 🌈 Farbübergang per Audio
-      color += 0.1 * sin(vec3(v_id * 0.005 + u_time, v_id * 0.007 + u_time, v_id * 0.01 + u_time)); // Extra Glow
+      vec3 color = mix(uColorStart, uColorEnd, audioVal);
+      color += 0.1 * sin(vec3(v_id * 0.005 + u_time, v_id * 0.007 + u_time, v_id * 0.01 + u_time));
 
       gl_FragColor = vec4(color, alpha * audioVal * 2.0);
     }
@@ -245,19 +228,38 @@ async function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  window.addEventListener('pointermove', (e)=>{
-    uniforms.u_mouse.value.x = e.clientX / window.innerWidth;
-    uniforms.u_mouse.value.y = 1.0 - (e.clientY / window.innerHeight);
-    uniforms.u_mousePower.value = 1.0;
-  });
-  window.addEventListener('pointerout', ()=>{
-    uniforms.u_mousePower.value = 0.0;
-  });
-  
-
   window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+  });
+
+  // Mouse interaction
+  renderer.domElement.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragMoved = false;
+    previousMousePosition = { x: e.clientX, y: e.clientY };
+  });
+
+  renderer.domElement.addEventListener('mouseup', () => {
+    isDragging = false;
+    if (!dragMoved) {
+      autoRotate = true;
+      clearTimeout(autoRotateTimeout);
+      autoRotateTimeout = setTimeout(() => {
+        autoRotate = false;
+      }, 5000);
+    }
+  });
+
+  renderer.domElement.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - previousMousePosition.x;
+    const deltaY = e.clientY - previousMousePosition.y;
+    if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) dragMoved = true;
+
+    previousMousePosition = { x: e.clientX, y: e.clientY };
+    groupRotation.y += deltaX * 0.005;
+    groupRotation.x += deltaY * 0.005;
   });
 }
 
@@ -275,37 +277,35 @@ function animate() {
   bassLevel = band / 255.0;
 
   const now = performance.now();
-const morphInterval = 15000; // Automatischer Wechsel alle 15s
+  const morphInterval = 15000;
+  if ((bassLevel > 0.5 && now - lastShapeChange > 1500) || (now - lastShapeChange > morphInterval)) {
+    const prev = shapeIndex;
+    let next = Math.floor(Math.random() * TOTAL_SHAPES);
+    while (next === prev) next = Math.floor(Math.random() * TOTAL_SHAPES);
+    shapeIndex = next;
+    setMorphTarget(prev, next);
+    lastShapeChange = now;
+  }
 
-if ((bassLevel > 0.5 && now - lastShapeChange > 1500) || (now - lastShapeChange > morphInterval)) {
-  const prev = shapeIndex;
-  let next = Math.floor(Math.random() * TOTAL_SHAPES);
-  while (next === prev) next = Math.floor(Math.random() * TOTAL_SHAPES); // kein doppeltes Ziel
-  shapeIndex = next;
-
-  setMorphTarget(prev, next);
-  lastShapeChange = now;
-}
-
-if (uniforms.u_morphProgress.value < 1.0) {
-  uniforms.u_morphProgress.value += 0.03;
-}
+  if (uniforms.u_morphProgress.value < 1.0) {
+    uniforms.u_morphProgress.value += 0.03;
+  }
 
   uniforms.u_time.value += 0.01;
-  // 🌈 Farbe dynamisch über HSL-Farbkreis rotieren
   const hue = (uniforms.u_time.value * 0.1) % 1.0;
   uniforms.uColorStart.value.setHSL(hue, 0.8, 0.5);
   uniforms.uColorEnd.value.setHSL((hue + 0.3) % 1.0, 0.8, 0.5);
   uniforms.u_audio.value.image.data.set(dataArray);
   uniforms.u_audio.value.needsUpdate = true;
 
-  const orbitRadius = 3.0;
-  const orbitSpeed = 0.15;
-  const time = uniforms.u_time.value;
-  camera.position.x = Math.cos(time * orbitSpeed) * orbitRadius;
-  camera.position.z = Math.sin(time * orbitSpeed) * orbitRadius;
-  camera.position.y = Math.sin(time * 0.1) * 0.5;
-  camera.lookAt(scene.position);
+  if (autoRotate) {
+    groupRotation.y += 0.01;
+  }
 
+  // 🌀 Hier: Rotation anwenden
+  points.rotation.y = groupRotation.y;
+  points.rotation.x = groupRotation.x;
+
+  camera.lookAt(scene.position);
   renderer.render(scene, camera);
 }

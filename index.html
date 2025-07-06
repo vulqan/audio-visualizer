@@ -9,7 +9,10 @@
       margin: 0;
       overflow: hidden;
       background: black;
+      font-family: monospace;
+      color: white;
     }
+
     #startButton {
       position: absolute;
       top: 50%;
@@ -19,28 +22,62 @@
       padding: 12px 24px;
       cursor: pointer;
       z-index: 10;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: white;
+      border: 1px solid #666;
+      border-radius: 6px;
+      transition: background 0.3s ease;
     }
-    #controls {
+
+    #startButton:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    #uiContainer {
       position: absolute;
-      top: 50px;
+      top: 10px;
       left: 10px;
       z-index: 10;
-      display: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    #controls button {
+
+    #uiContainer button,
+    #uiContainer select {
       font-size: 14px;
       padding: 6px 12px;
-      margin-right: 5px;
+      background-color: rgba(255, 255, 255, 0.07);
+      color: white;
+      border: 1px solid #666;
+      border-radius: 4px;
       cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #uiContainer button:hover,
+    #uiContainer select:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    #uiContainer label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
   </style>
 </head>
 <body>
   <button id="startButton">Start Visualizer</button>
-  <div id="controls">
-    <button id="playBtn">⏵ Play</button>
-    <button id="pauseBtn">⏸ Pause</button>
+
+  <div id="uiContainer" style="display: none;">
+    <div id="controls">
+      <button id="playBtn">⏵ Play</button>
+      <button id="pauseBtn">⏸ Pause</button>
+    </div>
+    <!-- Das Dropdown wird via JS ergänzt -->
   </div>
+
   <script type="module" src="main.js"></script>
 </body>
 </html>
