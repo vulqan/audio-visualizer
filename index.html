@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Audio Visualizer</title>
+
+  <!-- Styles for layout, UI controls, and overall look -->
   <style>
     body {
       margin: 0;
@@ -13,6 +15,7 @@
       color: white;
     }
 
+    /* Centered start button before initialization */
     #startButton {
       position: absolute;
       top: 50%;
@@ -29,10 +32,12 @@
       transition: background 0.3s ease;
     }
 
+    /* Hover effect for start button */
     #startButton:hover {
       background-color: rgba(255, 255, 255, 0.15);
     }
 
+    /* Top-left container for control UI (initially hidden) */
     #uiContainer {
       position: absolute;
       top: 10px;
@@ -43,6 +48,7 @@
       gap: 12px;
     }
 
+    /* Buttons and select dropdown styles */
     #uiContainer button,
     #uiContainer select {
       font-size: 14px;
@@ -55,11 +61,13 @@
       transition: background 0.3s ease;
     }
 
+    /* Hover effect for UI controls */
     #uiContainer button:hover,
     #uiContainer select:hover {
       background-color: rgba(255, 255, 255, 0.2);
     }
 
+    /* Label styling for the frequency band selector */
     #uiContainer label {
       display: flex;
       align-items: center;
@@ -68,13 +76,20 @@
   </style>
 </head>
 <body>
+
+  <!-- Button that starts the visualizer and audio context -->
   <button id="startButton">Start Visualizer</button>
 
+  <!-- Container for UI controls (play/pause, band selector) -->
   <div id="uiContainer" style="display: none;">
     <div id="controls">
+      <!-- Play the audio/visualizer -->
       <button id="playBtn">⏵ Play</button>
+      <!-- Pause the audio -->
       <button id="pauseBtn">⏸ Pause</button>
     </div>
+
+    <!-- Dropdown to choose the audio frequency range for triggering shape morphs -->
     <div id="bandSelectorContainer">
       <label>
         Frequency Trigger:
@@ -87,6 +102,7 @@
     </div>
   </div>
 
+  <!-- Load the Three.js visualizer script -->
   <script type="module" src="./main.js"></script>
 </body>
 </html>
