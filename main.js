@@ -21,48 +21,33 @@ let dragMoved = false;
 const TOTAL_SHAPES = 15;
 const shapePositions = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-  const startButton = document.getElementById('startButton');
-  startButton.style.display = 'block';
+const startButton = document.getElementById('startButton');
+startButton.style.display = 'block';
 
-  const uiContainer = document.getElementById('uiContainer');
+const uiContainer = document.getElementById('uiContainer');
 
-  const bandSelectorContainer = document.createElement('div');
-  bandSelectorContainer.innerHTML = `
-    <label>
-      Frequency Trigger:
-      <select id="bandSelector">
-        <option value="bass">Bass</option>
-        <option value="mid">Mid</option>
-        <option value="treble">Treble</option>
-      </select>
-    </label>
-  `;
-  uiContainer.appendChild(bandSelectorContainer);
+document.getElementById('bandSelector').addEventListener('change', (e) => {
+  frequencyBand = e.target.value;
+});
 
-  document.getElementById('bandSelector').addEventListener('change', (e) => {
-    frequencyBand = e.target.value;
-  });
+startButton.addEventListener('click', async () => {
+  startButton.style.display = 'none';
+  await init();
+  animate();
+  uiContainer.style.display = 'flex';
+});
 
-  document.getElementById('playBtn').addEventListener('click', () => {
-    if (audio.paused) {
-      audio.play();
-      audioContext.resume();
-    }
-  });
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (audio.paused) {
+    audio.play();
+    audioContext.resume();
+  }
+});
 
-  document.getElementById('pauseBtn').addEventListener('click', () => {
-    if (!audio.paused) {
-      audio.pause();
-    }
-  });
-
-  startButton.addEventListener('click', async () => {
-    startButton.style.display = 'none';
-    await init();
-    animate();
-    uiContainer.style.display = 'flex';
-  });
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  if (!audio.paused) {
+    audio.pause();
+  }
 });
 
 function generateShape(shapeIdx) {
@@ -218,7 +203,7 @@ async function init() {
 
       gl_FragColor = vec4(color, alpha * audioVal * 2.0);
     }
-    `,
+  `,
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending
