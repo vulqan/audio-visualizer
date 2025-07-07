@@ -206,7 +206,7 @@ async function init() {
       v_id = id;
       v_life = fade;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-      gl_PointSize = 2.5 + audioVal * 3.0;
+      gl_PointSize = 3.5 + audioVal * 4.0;
     }
     `,
     fragmentShader: `
@@ -230,7 +230,7 @@ async function init() {
       color += 0.2 * sin(vec3(v_id * 0.005 + u_time, v_id * 0.007 + u_time, v_id * 0.01 + u_time));
       color += glow * (audioVal * 1.5);
 
-      gl_FragColor = vec4(color, alpha * audioVal * 2.0);
+      gl_FragColor = vec4(color, alpha * audioVal * 3.0);
     }
     `,
     transparent: true,
